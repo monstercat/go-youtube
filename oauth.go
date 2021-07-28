@@ -21,6 +21,8 @@ const (
 	ScopeUpload             Scope = "https://www.googleapis.com/auth/youtube.upload"
 	ScopePartner            Scope = "https://www.googleapis.com/auth/youtubepartner"
 	ScopeAudit              Scope = "https://www.googleapis.com/auth/youtubepartner-channel-audit"
+	ScopeUserEmail          Scope = "https://www.googleapis.com/auth/userinfo.email"
+	ScopeUserProfile        Scope = "https://www.googleapis.com/auth/userinfo.profile"
 
 	AccessTypeOnline  AccessType = "online"
 	AccessTypeOffline AccessType = "offline"
@@ -62,7 +64,7 @@ func (t AccessType) IsValid() bool {
 
 func (s Scope) IsValid() bool {
 	switch s {
-	case ScopeAudit, ScopeAccount, ScopeChannelMemberships, ScopeForceSSL, ScopeReadOnly, ScopeUpload, ScopePartner:
+	case ScopeAudit, ScopeAccount, ScopeChannelMemberships, ScopeForceSSL, ScopeReadOnly, ScopeUpload, ScopePartner, ScopeUserEmail, ScopeUserProfile:
 		return true
 	}
 	return false
