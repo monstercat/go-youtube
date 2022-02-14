@@ -6,45 +6,22 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 )
 
 const (
-	BaseUrlV3 = "https://www.googleapis.com/youtube/v3"
+	BaseUrlV3        = "https://www.googleapis.com/youtube/v3"
+	YoutubePartnerV1 = "https://www.googleapis.com/youtube/partner/v1"
 )
+
+type RequestRunner interface {
+	Run(r *Request) (*http.Response, error)
+}
 
 type Request struct {
 	Method string
 	Url    string
 	Params url.Values
 	Body   io.Reader
-
-	// Each request must either specify an APIKey or provide an OAUTH token.
-	// This struct will default to AccessToken if provided
-	// @see https://developers.google.com/youtube/v3/docs
-	ApiKey      string
-	AccessToken string
-
-	/// Timeout for the request
-	Timeout time.Duration
-}
-
-func Run(r *Request) (*http.Response, error) {
-	if r.AccessToken == "" && r.ApiKey != "" {
-		r.Params.Add("key", r.ApiKey)
-	}
-	req, err := http.NewRequest(r.Method, r.Url+"?"+r.Params.Encode(), r.Body)
-	if err != nil {
-		return nil, err
-	}
-	if r.AccessToken != "" {
-		req.Header.Add("Authorization", "Bearer "+r.AccessToken)
-	}
-
-	client := http.Client{
-		Timeout: r.Timeout,
-	}
-	return client.Do(req)
 }
 
 func DecodeResponse(res *http.Response, out interface{}) error {

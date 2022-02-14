@@ -31,11 +31,43 @@ func ExchangeAuthToken(clientId, clientSecret, code, redirect string, timeout ti
 	vals.Add("code", code)
 	vals.Add("redirect_uri", redirect)
 
-	res, err := Run(&Request{
+	runner := &UnauthenticatedRunner{
+		Timeout: timeout,
+	}
+	res, err := runner.Run(&Request{
 		Method:  http.MethodPost,
 		Url:     ExchangeOAuthTokenUrl,
 		Params:  vals,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var t Token
+	if err := DecodeResponse(res, &t); err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// ExchangeJwtToken exchanges a Jwt token for an access token. The JWT token can be generated through
+// Use ConvertServiceAccountJsonToJWT to convert. Then, pass the access token to requests that require it. Note the
+// timeout to make sure that a timed-out access token is not used. If it is close to timing out, use
+// ConvertServiceAccountJsonToJWT to generate a new one.
+//
+// @see https://developers.google.com/identity/protocols/oauth2/service-account#httprest
+func ExchangeJwtToken(jwt string, timeout time.Duration) (*Token, error) {
+	vals := url.Values{}
+	vals.Add("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
+	vals.Add("assertion", jwt)
+
+	runner := &UnauthenticatedRunner{
 		Timeout: timeout,
+	}
+	res, err := runner.Run(&Request{
+		Method:  http.MethodPost,
+		Url:     ExchangeOAuthTokenUrl,
+		Params:  vals,
 	})
 	if err != nil {
 		return nil, err

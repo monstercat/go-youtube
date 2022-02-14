@@ -20,11 +20,13 @@ type UserInfo struct {
 }
 
 func GetUserInfo(token string, timeout time.Duration) (*UserInfo, error) {
-	res, err := Run(&Request{
-		Method:      http.MethodGet,
-		Url:         UserInfoUrl,
+	runner := &AccessTokenRunner{
 		Timeout:     timeout,
 		AccessToken: token,
+	}
+	res, err := runner.Run(&Request{
+		Method:      http.MethodGet,
+		Url:         UserInfoUrl,
 	})
 	if err != nil {
 		return nil, err
