@@ -131,13 +131,14 @@ func MyChannel(accessToken string, timeout time.Duration) (*Channel, error) {
 		},
 		Mine: true,
 	}
-
-	res, err := Run(&Request{
+	runner := &AccessTokenRunner{
+		AccessToken: accessToken,
+		Timeout:     timeout,
+	}
+	res, err := runner.Run(&Request{
 		Method:      http.MethodGet,
 		Url:         ListChannelsUrl,
 		Params:      opts.Values(),
-		AccessToken: accessToken,
-		Timeout:     timeout,
 	})
 	if err != nil {
 		return nil, err
