@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -26,22 +27,25 @@ type Request struct {
 
 func DecodeResponse(res *http.Response, out interface{}) error {
 	if res.StatusCode >= 400 {
-		var e Error
-		if err := json.NewDecoder(res.Body).Decode(&e); err == nil {
-			e.StatusCode = res.StatusCode
-			return e
-		}
-
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			return err
 		}
+
+		var e Error
+		if err := json.NewDecoder(bytes.NewReader(body)).Decode(&e); err == nil {
+			e.StatusCode = res.StatusCode
+			return e
+		}
+
 		e.StatusCode = res.StatusCode
 		e.ErrorType = ErrTypeUnknown
 		e.Description = string(body)
 		return e
 	}
-
+	if out == nil {
+		return nil
+	}
 	if err := json.NewDecoder(res.Body).Decode(out); err != nil {
 		body, bodyErr := ioutil.ReadAll(res.Body)
 		if bodyErr != nil {
