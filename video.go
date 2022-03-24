@@ -134,7 +134,7 @@ func (o *ListVideoParams) Values() url.Values {
 	if o.PageToken != "" {
 		vals.Add("pageToken", o.PageToken)
 	} else if len(o.Ids) > 0 {
-		vals["id"] = o.Ids
+		vals.Add("id", strings.Join(o.Ids, ","))
 	}
 	return vals
 }
