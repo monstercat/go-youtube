@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -38,6 +39,13 @@ const (
 	ClaimStatusPotential       ClaimStatus = "potential"
 	ClaimStatusRoutedForReview ClaimStatus = "routedForReview"
 	ClaimStatusTakedown        ClaimStatus = "takedown"
+
+	ClaimSortDate      = "date"
+	ClaimSortViewCount = "viewCount"
+)
+
+var (
+	DateRegexp = regexp.MustCompile("\\d{4}-\\d{2}-\\d{2}")
 )
 
 func (s ClaimStatus) Valid() bool {
@@ -87,6 +95,9 @@ type Claim struct {
 
 	// TimeCreated: The time the claim was created.
 	TimeCreated string `json:"timeCreated,omitempty"`
+
+	// TimeStatusLastModified: The time that the claim's status was last modified.
+	TimeStatusLastModified string `json:"timeStatusLastModified"`
 
 	// VideoId: The unique YouTube video ID that identifies the video
 	// associated with the claim.
@@ -165,6 +176,16 @@ type SearchClaimsParams struct {
 	// The onBehalfOfContentOwner parameter identifies the content owner that the user is acting on behalf of. This
 	// parameter supports users whose accounts are associated with multiple content owners.
 	OnBehalfOfContentOwner string
+
+	// The sort parameter specifies the method that will be used to order resources in the API response. The default
+	// value is date. However, if the status parameter value is either appealed, disputed, pending, potential, or
+	// routedForReview, then results will be sorted by the time that the claim review period expires.
+	Sort string
+
+	// The statusModifiedAfter parameter allows you to restrict the result set to only include claims that have had
+	// their status modified on or after the specified date (inclusive). The date specified must be on or after
+	// June 30, 2016 (2016-06-30). The parameter value's format is YYYY-MM-DD.
+	StatusModifiedAfter string
 }
 
 func (p *SearchClaimsParams) Validate() bool {
@@ -228,6 +249,15 @@ func (p *SearchClaimsParams) Values() url.Values {
 	}
 	if p.PageToken != "" {
 		vals.Add("pageToken", p.PageToken)
+	}
+	switch p.Sort {
+	case ClaimSortDate:
+		vals.Add("sort", "date")
+	case ClaimSortViewCount:
+		vals.Add("sort", "viewCount")
+	}
+	if p.StatusModifiedAfter != "" && DateRegexp.MatchString(p.StatusModifiedAfter) {
+		vals.Add("statusModifiedAfter", p.StatusModifiedAfter)
 	}
 	return vals
 }
