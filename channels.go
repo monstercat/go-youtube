@@ -56,7 +56,7 @@ type ListChannelsOpts struct {
 
 	/// Filters
 	ForUsername string
-	Id          string
+	Id          []string
 	ManagedByMe bool
 	Mine        bool
 
@@ -65,6 +65,15 @@ type ListChannelsOpts struct {
 	MaxResults             int
 	OnBehalfOfContentOwner string
 	PageToken              string
+}
+
+// ListChannelsResponse represents the response from the ListChannels API call.
+type ListChannelsResponse struct {
+	Kind          string     `json:"kind"`
+	Etag          string     `json:"etag"`
+	PrevPageToken string     `json:"prevPageToken"`
+	NextPageToken string     `json:"nextPageToken"`
+	Items         []*Channel `json:"items"`
 }
 
 func (o ListChannelsOpts) convertParts() []string {
@@ -97,8 +106,8 @@ func (o ListChannelsOpts) Values() url.Values {
 	if o.ForUsername != "" {
 		vals.Add("forUsername", o.ForUsername)
 	}
-	if o.Id != "" {
-		vals.Add("id", o.Id)
+	if len(o.Id) > 0 {
+		vals.Add("id", strings.Join(o.Id, ","))
 	}
 	if o.ManagedByMe {
 		vals.Add("managedbyMe", "true")
@@ -121,6 +130,24 @@ func (o ListChannelsOpts) Values() url.Values {
 	return vals
 }
 
+// ListChannels retrieves a list of channels that match the provided options.
+// @see https://developers.google.com/youtube/v3/docs/channels/list
+func ListChannels(runner RequestRunner, opts *ListChannelsOpts) (*ListChannelsResponse, error) {
+	res, err := runner.Run(&Request{
+		Method: http.MethodGet,
+		Url:    ListChannelsUrl,
+		Params: opts.Values(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var out ListChannelsResponse
+	if err := DecodeResponse(res, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // MyChannel retrieves the channel related to the provided access token.
 // We will be setting Mine to true, thereby forcing the request to return only a single channel
 // @see https://developers.google.com/youtube/v3/docs/channels/list
@@ -136,9 +163,9 @@ func MyChannel(accessToken string, timeout time.Duration) (*Channel, error) {
 		Timeout:     timeout,
 	}
 	res, err := runner.Run(&Request{
-		Method:      http.MethodGet,
-		Url:         ListChannelsUrl,
-		Params:      opts.Values(),
+		Method: http.MethodGet,
+		Url:    ListChannelsUrl,
+		Params: opts.Values(),
 	})
 	if err != nil {
 		return nil, err
