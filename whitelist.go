@@ -19,12 +19,32 @@ const (
 	WhitelistUrl = YoutubePartnerV1 + "/whitelists"
 )
 
-// Whitelist represents a resource that can be whitelisted. This is technically a YouTube Channel (e.g., the
-// Id will be equivalent to a YouTube Channel ID and the Title will be equivalent to a YouTube Channel Title.
-// https://developers.google.com/youtube/partner/docs/v1/whitelists#resource
+// Whitelist represents a whitelisted YouTube channel. Whitelisted channels are
+// channels that are not owned or managed by the content owner, but have been
+// exempted so that no claims from the content owner's assets are placed on
+// videos uploaded to these channels.
+//
+// see https://developers.google.com/youtube/partner/reference/rest/v1/whitelists#Whitelist
 type Whitelist struct {
-	Id    string `json:"id"`
-	Title string `json:"title"`
+	// Id is the YouTube channel ID of the whitelisted channel.
+	Id string `json:"id,omitempty"`
+	// Kind identifies the API resource type. The value is "youtubePartner#whitelist".
+	Kind string `json:"kind,omitempty"`
+	// Title is the title (display name) of the whitelisted YouTube channel.
+	Title string `json:"title,omitempty"`
+}
+
+// WhitelistListResponse is the response for whitelists.list.
+type WhitelistListResponse struct {
+	// Items is a list of whitelisted channels that match the request criteria.
+	Items []*Whitelist `json:"items"`
+	// Kind identifies the API resource type. The value is "youtubePartner#whitelistList".
+	Kind string `json:"kind,omitempty"`
+	// NextPageToken is the token that can be used as the value of the pageToken
+	// parameter to retrieve the next page in the result set.
+	NextPageToken string `json:"nextPageToken,omitempty"`
+	// PageInfo contains paging details for the result set.
+	PageInfo *PageInfo `json:"pageInfo,omitempty"`
 }
 
 // GetWhitelistParams are parameters specifically for the GetWhitelist method.
@@ -139,6 +159,56 @@ func DeleteWhitelist(runner RequestRunner, p *DeleteWhitelistParams) error {
 		return err
 	}
 	return convertWhitelistError(DecodeResponse(res, nil))
+}
+
+// ListWhitelistsParams are parameters for whitelists.list.
+type ListWhitelistsParams struct {
+	// Id filters the results to only include the whitelist entry for the
+	// specified YouTube channel ID.
+	Id string
+	// OnBehalfOfContentOwner identifies the content owner that the user is
+	// acting on behalf of. This parameter supports users whose accounts are
+	// associated with multiple content owners.
+	OnBehalfOfContentOwner string
+	// PageToken is the token that identifies a specific page in the result set
+	// that should be returned. Set this to the value of nextPageToken from a
+	// previous response to retrieve the next page.
+	PageToken string
+}
+
+func (p *ListWhitelistsParams) Values() url.Values {
+	vals := url.Values{}
+	if p.Id != "" {
+		vals.Set("id", p.Id)
+	}
+	if p.OnBehalfOfContentOwner != "" {
+		vals.Set("onBehalfOfContentOwner", p.OnBehalfOfContentOwner)
+	}
+	if p.PageToken != "" {
+		vals.Set("pageToken", p.PageToken)
+	}
+	return vals
+}
+
+// ListWhitelists retrieves a list of whitelisted YouTube channels for the
+// content owner. Whitelisted channels are exempt from having claims placed
+// on their uploaded videos by the content owner's assets.
+//
+// see https://developers.google.com/youtube/partner/reference/rest/v1/whitelists/list
+func ListWhitelists(runner RequestRunner, p *ListWhitelistsParams) (*WhitelistListResponse, error) {
+	res, err := runner.Run(&Request{
+		Method: http.MethodGet,
+		Url:    WhitelistUrl,
+		Params: p.Values(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var out WhitelistListResponse
+	if err := DecodeResponse(res, &out); err != nil {
+		return nil, convertWhitelistError(err)
+	}
+	return &out, nil
 }
 
 // Converts whitelist errors according to https://developers.google.com/youtube/partner/docs/v1/errors#general
