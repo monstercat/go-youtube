@@ -11,8 +11,14 @@ const (
 	MusicReleasesUrl       = YoutubePartnerV1 + "/music/releases"
 )
 
-// Artist represents a music artist.
+// Artist holds info of the artist, such as name and isni.
 type Artist struct {
+	// DisplayName is the name of the artist.
+	DisplayName string `json:"displayName,omitempty"`
+	// Isni is the unique identifier of the artist.
+	Isni string `json:"isni,omitempty"`
+	// Name is retained for backwards compatibility. The spec field is
+	// `displayName`; populate DisplayName above for new code.
 	Name string `json:"name,omitempty"`
 }
 
@@ -107,38 +113,103 @@ type MusicChangeRequest struct {
 	UndesiredDiscography *UndesiredDiscography `json:"undesiredDiscography,omitempty"`
 }
 
-// IncorrectMetadata describes incorrect metadata in a music change request
-// and provides the corrected values.
+// IncorrectMetadata corresponds to the "(Release / Art track) I delivered
+// has incorrect spelling, formatting, or translation" and "(Release / Art
+// track) I delivered has the wrong primary or featured artist" options.
 type IncorrectMetadata struct {
-	// CorrectTitle is the corrected title for the track.
+	// SupplementalInfo is generic supplemental information.
+	SupplementalInfo string `json:"supplementalInfo,omitempty"`
+
+	// CorrectTitle is retained for backwards compatibility. Not defined
+	// in the discovery spec.
 	CorrectTitle string `json:"correctTitle,omitempty"`
-	// CorrectArtist is the corrected list of artists for the track.
+	// CorrectArtist is retained for backwards compatibility. Not defined
+	// in the discovery spec.
 	CorrectArtist []*Artist `json:"correctArtist,omitempty"`
 }
 
-// DesiredMusicVideo describes the desired music video in a change request.
+// DesiredMusicVideo represents the desired music video to associate with an
+// Art Track, as specified by a partner.
 type DesiredMusicVideo struct {
-	// DesiredVideoId is the YouTube video ID that should be associated with the track.
+	// NoMusicVideo is true iff no music video should be associated with
+	// the track. VideoId should be unset if this is true.
+	NoMusicVideo bool `json:"noMusicVideo,omitempty"`
+	// SupplementalInfo is generic supplemental information.
+	SupplementalInfo string `json:"supplementalInfo,omitempty"`
+	// TerritorySet is the territories where this music video association
+	// should apply.
+	TerritorySet *TerritorySet `json:"territorySet,omitempty"`
+	// VideoId is the video ID of the desired music video to associate
+	// with the track.
+	VideoId string `json:"videoId,omitempty"`
+
+	// DesiredVideoId is retained for backwards compatibility. The spec
+	// field is `videoId`; populate VideoId above for new code.
 	DesiredVideoId string `json:"desiredVideoId,omitempty"`
 }
 
-// IncorrectPlayability describes incorrect playability in a change request.
+// IncorrectPlayability corresponds to the "(Release / Art track) is not
+// playable or visible as expected in product" option.
 type IncorrectPlayability struct {
-	// Explanation is a free-text explanation of the playability issue.
+	// RightsTypes is the rights types to which the reported change request
+	// applies. Allowed values include "CHANGE_REQUEST_RIGHTS_TYPE_UNSPECIFIED",
+	// "AVOD", and "SVOD".
+	RightsTypes []string `json:"rightsTypes,omitempty"`
+	// SupplementalInfo is generic supplemental information.
+	SupplementalInfo string `json:"supplementalInfo,omitempty"`
+	// Surfaces is the surfaces to which the reported change request
+	// applies. Allowed values include "CHANGE_REQUEST_SURFACE_UNSPECIFIED",
+	// "YOUTUBE_MUSIC", and "YOUTUBE".
+	Surfaces []string `json:"surfaces,omitempty"`
+	// TerritorySet is the territories to which the reported change request
+	// applies.
+	TerritorySet *TerritorySet `json:"territorySet,omitempty"`
+
+	// Explanation is retained for backwards compatibility. Not defined
+	// in the discovery spec.
 	Explanation string `json:"explanation,omitempty"`
 }
 
-// DesiredArtist describes a desired artist correction in a change request.
+// DesiredArtist represents the desired artist for reconciliation, as
+// specified by a partner.
 type DesiredArtist struct {
-	// DesiredArtistName is the correct artist name that the track should be reconciled to.
+	// ChannelId is the channel ID of the desired artist.
+	ChannelId string `json:"channelId,omitempty"`
+	// NewArtist is true iff there is no existing artist to associate
+	// with the release. ChannelId should be unset if this is true.
+	NewArtist bool `json:"newArtist,omitempty"`
+	// SupplementalInfo is generic supplemental information.
+	SupplementalInfo string `json:"supplementalInfo,omitempty"`
+
+	// DesiredArtistName is retained for backwards compatibility. Not
+	// defined in the discovery spec.
 	DesiredArtistName string `json:"desiredArtistName,omitempty"`
 }
 
-// UndesiredDiscography describes an undesired discography in a change request.
+// UndesiredDiscography corresponds to the "Another artist's release is
+// incorrectly appearing on my artist's channel" option.
 type UndesiredDiscography struct {
-	// Explanation is a free-text explanation of why the content should be removed
-	// from the artist's discography.
+	// ChannelId is the channel ID of the artist with the undesired release
+	// discography.
+	ChannelId string `json:"channelId,omitempty"`
+	// SupplementalInfo is generic supplemental information.
+	SupplementalInfo string `json:"supplementalInfo,omitempty"`
+	// UndesiredPlaylistIds is the playlist IDs of the undesired releases.
+	UndesiredPlaylistIds []string `json:"undesiredPlaylistIds,omitempty"`
+
+	// Explanation is retained for backwards compatibility. Not defined
+	// in the discovery spec.
 	Explanation string `json:"explanation,omitempty"`
+}
+
+// TerritorySet is a collection of regions.
+type TerritorySet struct {
+	// EverywhereComplement, if true, indicates that this forms the
+	// complement of the RegionCodes set. Note that if this is true and
+	// RegionCodes is empty it means everywhere.
+	EverywhereComplement bool `json:"everywhereComplement,omitempty"`
+	// RegionCodes is the list of regions with Unicode CLDR.
+	RegionCodes []string `json:"regionCodes,omitempty"`
 }
 
 // ListMusicChangeRequestsResponse is the response for musicChangeRequests.list.

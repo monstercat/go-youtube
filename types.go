@@ -9,8 +9,13 @@ type Date struct {
 
 // Rating represents a content rating.
 type Rating struct {
+	// Rating is the rating that the asset received.
+	Rating string `json:"rating,omitempty"`
+	// RatingSystem is the rating system associated with the rating.
 	RatingSystem string `json:"ratingSystem,omitempty"`
-	RatingValue  string `json:"ratingValue,omitempty"`
+	// RatingValue is retained for backwards compatibility. The spec
+	// field is `rating`; populate the Rating field above for new code.
+	RatingValue string `json:"ratingValue,omitempty"`
 }
 
 // Origin describes the origin of a claim or other resource.
@@ -31,9 +36,20 @@ type Origination struct {
 	Source string `json:"source,omitempty"`
 }
 
-// StudioInfo contains information about a claim from the YouTube Studio.
+// StudioInfo contains URLs linking back to claim-related pages in Studio.
 type StudioInfo struct {
+	// ClaimUrl links to the claim page in Studio. Note: this page loads
+	// differently depending on whether the claim has "action required"
+	// issue or not.
+	ClaimUrl string `json:"claimUrl,omitempty"`
+	// IssueUrl, when the claim has an "action required" issue (guaranteed
+	// to be at most 1), links to the issue page in Studio.
+	IssueUrl string `json:"issueUrl,omitempty"`
+	// StudioUrl is retained for backwards compatibility. The spec does
+	// not define this field; use ClaimUrl / IssueUrl / VideoUrl instead.
 	StudioUrl string `json:"studioUrl,omitempty"`
+	// VideoUrl links to the claimed video page in Studio.
+	VideoUrl string `json:"videoUrl,omitempty"`
 }
 
 // MatchInfo contains match information for a claim.
@@ -72,11 +88,36 @@ type Segment struct {
 	Start    string `json:"start,omitempty"`
 }
 
-// Segment2 represents a manual segment with float start/duration.
+// Segment2 represents the manual_segment payload on a MatchSegment.
+//
+// Start and Finish are deliberately kept as raw strings rather than a
+// parsed time/duration type: the YouTube Partner v1 discovery document
+// contradicts itself about their format, so any decoded shape we
+// committed to would be wrong half the time. The schema-level
+// description says
+//
+//	"...start and finish time formatted as a \"hh:mm:ss.mmm\" string."
+//
+// while the per-field descriptions on the very same schema say
+//
+//	"...measured in milliseconds from the beginning."
+//
+// Google has shipped responses in both formats in the wild, and they
+// can swap which one they send at any time without changing the
+// schema. Sampling the production response to "decide" the type isn't
+// safe — the contract is just "string." Callers that need a typed
+// value must sniff (a `:` means hh:mm:ss.mmm, otherwise treat as a
+// uint64 millisecond count) and tolerate either form.
 type Segment2 struct {
-	Duration float64 `json:"duration,omitempty"`
-	Kind     string  `json:"kind,omitempty"`
-	Start    float64 `json:"start,omitempty"`
+	// Finish is the finish time of the segment. See the type-level
+	// doc above for why this is a string with no committed format.
+	Finish string `json:"finish,omitempty"`
+	// Kind is the type of the API resource. For segment resources, the
+	// value is `youtubePartner#segment`.
+	Kind string `json:"kind,omitempty"`
+	// Start is the start time of the segment. See the type-level doc
+	// above for why this is a string with no committed format.
+	Start string `json:"start,omitempty"`
 }
 
 // TypeDetails provides details about a claim event type.
@@ -99,16 +140,36 @@ type TerritoryCondition struct {
 	Type        string   `json:"type,omitempty"`
 }
 
-// ExcludedInterval represents an interval excluded from a reference.
+// ExcludedInterval defines a time window within the reference that will be
+// ignored during the match process.
 type ExcludedInterval struct {
+	// High is the end (inclusive) time in seconds of the time window. The
+	// value can be any value greater than `low`. If `high` is greater
+	// than the length of the reference, the interval between `low` and
+	// the end of the reference will be excluded. Every interval must
+	// specify a value for this field.
 	High float64 `json:"high,omitempty"`
-	Low  float64 `json:"low,omitempty"`
+	// Low is the start (inclusive) time in seconds of the time window.
+	// The value can be any value between `0` and `high`. Every interval
+	// must specify a value for this field.
+	Low float64 `json:"low,omitempty"`
+	// Origin is the source of the request to exclude the interval from
+	// Content ID matching.
+	Origin string `json:"origin,omitempty"`
+	// TimeCreated is the date and time that the exclusion was created.
+	// The value is specified in RFC 3339 (`YYYY-MM-DDThh:mm:ss.000Z`) format.
+	TimeCreated string `json:"timeCreated,omitempty"`
 }
 
 // StatusReport provides a status report for a package.
 type StatusReport struct {
+	// StatusContent is the content of the status report.
 	StatusContent string `json:"statusContent,omitempty"`
-	StatusId      string `json:"statusId,omitempty"`
+	// StatusFileName is the file name of the status report.
+	StatusFileName string `json:"statusFileName,omitempty"`
+	// StatusId is retained for backwards compatibility. The spec does
+	// not define this field; use StatusFileName instead.
+	StatusId string `json:"statusId,omitempty"`
 }
 
 // TerritoryOwners describes ownership in specific territories.
@@ -141,8 +202,20 @@ type OwnershipConflicts struct {
 	Synchronization []*TerritoryConflicts `json:"synchronization,omitempty"`
 }
 
-// NWayRevenueSharing describes N-way revenue sharing for an asset.
+// NWayRevenueSharing carries information about an asset's n-way revshare.
 type NWayRevenueSharing struct {
+	// EligibleTerritories is the list of territories in which the asset is
+	// eligible for n-way revenue sharing. Each country is represented by
+	// its two-letter ISO country code (ISO 3166-1 alpha-2).
+	EligibleTerritories []string `json:"eligibleTerritories,omitempty"`
+	// IneligibleTerritories carries information about territories in which
+	// the asset is ineligible for n-way revenue sharing.
+	IneligibleTerritories []*TerritoriesIneligibleForNWayRevenueSharing `json:"ineligibleTerritories,omitempty"`
+	// Status is the status of n-way revenue sharing.
+	Status string `json:"status,omitempty"`
+	// TerritoriesIneligible is retained for backwards compatibility. The
+	// spec field is `ineligibleTerritories`; populate IneligibleTerritories
+	// above for new code.
 	TerritoriesIneligible []*TerritoriesIneligibleForNWayRevenueSharing `json:"territoriesIneligible,omitempty"`
 }
 
@@ -170,10 +243,15 @@ type CampaignTargetLink struct {
 	TargetType string `json:"targetType,omitempty"`
 }
 
-// AdBreak represents an ad break in a video.
+// AdBreak contains information about a time when YouTube can show an
+// in-stream advertisement during video playback.
 type AdBreak struct {
-	MidrollSeconds float64 `json:"midrollSeconds,omitempty"`
-	Position       string  `json:"position,omitempty"`
+	// MidrollSeconds is the time of the ad break specified as the number
+	// of seconds after the start of the video when the break occurs.
+	MidrollSeconds int32 `json:"midrollSeconds,omitempty"`
+	// Position is the point at which the break occurs during the video
+	// playback.
+	Position string `json:"position,omitempty"`
 }
 
 // CountriesRestriction describes ad restrictions by country.
