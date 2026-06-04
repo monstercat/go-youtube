@@ -91,12 +91,25 @@ type ListContentOwnersParams struct {
 	// the currently authenticated user. Set to true to retrieve content owners
 	// that the authenticated user is able to act on behalf of.
 	FetchMine bool
+	// Id specifies a comma-separated list of YouTube content owner IDs that
+	// identify the content owners you want to retrieve.
+	Id string
+	// OnBehalfOfContentOwner identifies the content owner that the user is
+	// acting on behalf of. This parameter supports users whose accounts are
+	// associated with multiple content owners.
+	OnBehalfOfContentOwner string
 }
 
 func (p *ListContentOwnersParams) Values() url.Values {
 	v := url.Values{}
 	if p.FetchMine {
 		v.Set("fetchMine", "true")
+	}
+	if p.Id != "" {
+		v.Set("id", p.Id)
+	}
+	if p.OnBehalfOfContentOwner != "" {
+		v.Set("onBehalfOfContentOwner", p.OnBehalfOfContentOwner)
 	}
 	return v
 }

@@ -46,6 +46,10 @@ type CuepointSettings struct {
 
 // InsertLiveCuepointParams are parameters for liveCuepoints.insert.
 type InsertLiveCuepointParams struct {
+	// ChannelId is the YouTube channel ID of the channel broadcasting the live
+	// stream. The channel must be linked to a content owner. This parameter is
+	// required.
+	ChannelId string
 	// OnBehalfOfContentOwner identifies the content owner that the user is
 	// acting on behalf of. This parameter supports users whose accounts are
 	// associated with multiple content owners.
@@ -56,6 +60,9 @@ type InsertLiveCuepointParams struct {
 
 func (p *InsertLiveCuepointParams) Values() url.Values {
 	v := url.Values{}
+	if p.ChannelId != "" {
+		v.Set("channelId", p.ChannelId)
+	}
 	if p.OnBehalfOfContentOwner != "" {
 		v.Set("onBehalfOfContentOwner", p.OnBehalfOfContentOwner)
 	}
