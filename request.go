@@ -1,7 +1,6 @@
 package youtube
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -32,16 +31,53 @@ func DecodeResponse(res *http.Response, out interface{}) error {
 			return err
 		}
 
-		var e Error
-		if err := json.NewDecoder(bytes.NewReader(body)).Decode(&e); err == nil {
-			e.StatusCode = res.StatusCode
+		// Content ID API error envelope:
+		// {"error":{"code":..,"message":..,"errors":[{reason,domain,message}]}}.
+		// Tried first because its object-valued "error" field cannot decode
+		// into the OAuth shape below.
+		var env struct {
+			Error struct {
+				Code    int           `json:"code"`
+				Message string        `json:"message"`
+				Errors  []ErrorDetail `json:"errors"`
+			} `json:"error"`
+		}
+		if err := json.Unmarshal(body, &env); err == nil &&
+			(env.Error.Code != 0 || len(env.Error.Errors) > 0) {
+			e := Error{
+				StatusCode:  res.StatusCode,
+				ErrorType:   ErrTypeUnknown,
+				Description: env.Error.Message,
+				Body:        string(body),
+				Errors:      env.Error.Errors,
+			}
+			if len(env.Error.Errors) > 0 {
+				e.Reason = env.Error.Errors[0].Reason
+			}
 			return e
 		}
 
-		e.StatusCode = res.StatusCode
-		e.ErrorType = ErrTypeUnknown
-		e.Description = string(body)
-		return e
+		// OAuth-style error: {"error":"invalid_grant","error_description":".."}.
+		var oauth struct {
+			Error       ErrorType `json:"error"`
+			Description string    `json:"error_description"`
+		}
+		if err := json.Unmarshal(body, &oauth); err == nil {
+			return Error{
+				StatusCode:  res.StatusCode,
+				ErrorType:   oauth.Error,
+				Description: oauth.Description,
+				Body:        string(body),
+			}
+		}
+
+		// Unrecognised shape (e.g. an HTML or plain-text body).
+		return Error{
+			StatusCode:  res.StatusCode,
+			ErrorType:   ErrTypeUnknown,
+			Description: string(body),
+			Body:        string(body),
+		}
 	}
 	if out == nil {
 		return nil
