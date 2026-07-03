@@ -58,6 +58,10 @@ const (
 	ReasonContentOwnerNotProvided  = "contentOwnerNotProvided"
 	ReasonServiceAccountNotAllowed = "serviceAccountNotAllowed"
 	ReasonInternalError            = "internalError"
+	// ReasonInvalid is the global-domain rejection of an invalid request
+	// parameter value; observed on claimSearch.list for an expired or
+	// malformed pageToken.
+	ReasonInvalid = "invalid"
 )
 
 type OAuthError string
